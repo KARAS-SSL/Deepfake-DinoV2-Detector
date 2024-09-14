@@ -4,59 +4,109 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Load the pre-trained DinoV2 model and image processor using AutoImageProcessor
-model = Dinov2Model.from_pretrained('facebook/dinov2-base')
-processor = AutoImageProcessor.from_pretrained('facebook/dinov2-base')
 
-# Load and preprocess the input image
-image_path = "your_image.jpg"  # Replace with your image path
-image = Image.open(image_path)
-inputs = processor(images=image, return_tensors="pt")
+# Function to preprocess the image
+def preprocess_image(image_path, processor):
+    image = Image.open(image_path)
+    inputs = processor(images=image, return_tensors="pt")
+    return image, inputs
 
-# Forward pass to get outputs including attention weights
-with torch.no_grad():
-    outputs = model(**inputs, output_attentions=True)
 
-# Access the attentions (list of tensor for each layer)
-attentions = outputs.attentions  # (layers, batch_size, num_heads, sequence_length, sequence_length)
+# Function to get attention maps from the model
+def get_attention_maps(model, inputs):
+    with torch.no_grad():
+        outputs = model(**inputs, output_attentions=True)
+    attentions = outputs.attentions  # List of attention maps (layers, batch_size, num_heads, seq_len, seq_len)
+    return attentions
 
-# Set up the grid layout: define rows and columns for visualization
-num_layers = len(attentions)
-grid_size = int(np.ceil(np.sqrt(num_layers)))  # Create a square grid that fits all layers
 
-# Create a matplotlib figure
-plt.figure(figsize=(12, 12))
+# Function to visualize attention maps for each layer
+def display_attention_layers(image, attentions):
+    num_layers = len(attentions)
+    grid_size = int(np.ceil(np.sqrt(num_layers)))  # Define grid size for subplots
 
-# Iterate through each layer's attentions
-for i, layer_attention in enumerate(attentions):
-    # Average attention across all heads
-    avg_attention = layer_attention.mean(dim=1)  # (batch_size, sequence_length, sequence_length)
+    plt.figure(figsize=(12, 12))
+    for i, layer_attention in enumerate(attentions):
+        avg_attention = layer_attention.mean(dim=1)  # Average across heads
+        sequence_length = avg_attention.shape[-1]
+        num_patches = sequence_length - 1
+        h_patches = w_patches = int(num_patches ** 0.5)  # Assuming square grid of patches
 
-    # Get the attention map for the [CLS] token
-    sequence_length = avg_attention.shape[-1]
-    patch_size = 16
+        cls_attention = avg_attention[0, 0, 1:].reshape(h_patches, w_patches).cpu().numpy()
+        cls_attention_resized = np.array(Image.fromarray(cls_attention).resize(image.size, Image.BILINEAR))
+        cls_attention_resized = (cls_attention_resized - cls_attention_resized.min()) / (
+                    cls_attention_resized.max() - cls_attention_resized.min())
 
-    # Compute the number of patches (sequence_length - 1 because of the [CLS] token)
+        plt.subplot(grid_size, grid_size, i + 1)
+        plt.imshow(image)
+        plt.imshow(cls_attention_resized, cmap='jet', alpha=0.5)
+        plt.axis('off')
+        plt.title(f"Layer {i + 1}")
+
+    plt.tight_layout()
+    plt.show()
+
+
+# Function to compute and display the average attention map across all layers
+def display_average_attention(image, attentions):
+    num_layers = len(attentions)
+    average_attention_across_layers = None
+
+    for layer_attention in attentions:
+        avg_attention = layer_attention.mean(dim=1)  # Average across heads
+        if average_attention_across_layers is None:
+            average_attention_across_layers = avg_attention
+        else:
+            average_attention_across_layers += avg_attention
+
+    # Average across all layers
+    average_attention_across_layers /= num_layers
+
+    sequence_length = average_attention_across_layers.shape[-1]
     num_patches = sequence_length - 1
-    h_patches = w_patches = int(num_patches ** 0.5)  # Assuming a square grid of patches
+    h_patches = w_patches = int(num_patches ** 0.5)
 
-    # Reshape the attention to the grid of patches
-    cls_attention = avg_attention[0, 0, 1:].reshape(h_patches, w_patches).cpu().numpy()
+    cls_attention_avg = average_attention_across_layers[0, 0, 1:].reshape(h_patches, w_patches).cpu().numpy()
+    cls_attention_resized = np.array(Image.fromarray(cls_attention_avg).resize(image.size, Image.BILINEAR))
+    cls_attention_resized = (cls_attention_resized - cls_attention_resized.min()) / (
+                cls_attention_resized.max() - cls_attention_resized.min())
 
-    # Resize the attention map to the size of the original image
-    cls_attention_resized = np.array(Image.fromarray(cls_attention).resize(image.size, Image.BILINEAR))
+    # Visualize original image and averaged attention map
+    plt.figure(figsize=(10, 10))
 
-    # Normalize for visualization
-    cls_attention_resized = (cls_attention_resized - cls_attention_resized.min()) / (cls_attention_resized.max() - cls_attention_resized.min())
-
-    # Plot the attention map in the grid
-    plt.subplot(grid_size, grid_size, i + 1)
+    plt.subplot(1, 2, 1)
     plt.imshow(image)
-    plt.imshow(cls_attention_resized, cmap='jet', alpha=0.5)  # Overlay attention map
     plt.axis('off')
-    plt.title(f"Layer {i + 1}")
+    plt.title("Original Image")
 
-# Adjust layout and display the grid
-plt.tight_layout()
-plt.show()
+    plt.subplot(1, 2, 2)
+    plt.imshow(image)
+    plt.imshow(cls_attention_resized, cmap='jet', alpha=0.5)
+    plt.axis('off')
+    plt.title("Average Attention Across Layers")
+
+    plt.show()
+
+
+# Main function to process the image, get attention maps, and display both individual layers and the average map
+def main(image_path):
+    model = Dinov2Model.from_pretrained('facebook/dinov2-base')
+    processor = AutoImageProcessor.from_pretrained('facebook/dinov2-base')
+
+    # Preprocess image
+    image, inputs = preprocess_image(image_path, processor)
+
+    # Get attention maps from the model
+    attentions = get_attention_maps(model, inputs)
+
+    # Display attention layers
+    display_attention_layers(image, attentions)
+
+    # Display average attention across layers
+    display_average_attention(image, attentions)
+
+
+# Run the main function with your image path
+image_path = "your_image.jpg"  # Replace with the path to your image
+main(image_path)
 
