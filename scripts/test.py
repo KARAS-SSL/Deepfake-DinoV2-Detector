@@ -36,31 +36,20 @@ def get_attention_maps(model, img):
     attentions = attentions[0, :, 0, 1:].reshape(nh, -1)
     return attentions, nh
 
-def process_attention_maps(attentions, nh, patch_size, dim_feature_map, threshold=0.6):
-    val, idx = torch.sort(attentions)
-    val /= torch.sum(val, dim=1, keepdim=True)
-    cumval = torch.cumsum(val, dim=1)
-    th_attn = cumval > (1 - threshold)
-    idx2 = torch.argsort(idx)
-    for head in range(nh):
-        th_attn[head] = th_attn[head][idx2[head]]
-    
-    th_attn = th_attn.reshape(nh, dim_feature_map[0]//2, dim_feature_map[1]//2).float() 
-    th_attn = nn.functional.interpolate(th_attn.unsqueeze(0), scale_factor=patch_size, mode="nearest")[0].cpu().numpy()
-    
+def process_attention_maps(attentions, nh, patch_size, dim_feature_map):    
     attentions = attentions.reshape(nh, dim_feature_map[0]//2, dim_feature_map[1]//2)
     attentions = nn.functional.interpolate(attentions.unsqueeze(0), scale_factor=patch_size, mode="nearest")[0].cpu().numpy()
-    attentions_mean = np.mean(attentions, axis=0)
-    
+    attentions_mean = np.mean(attentions, axis=0)    
     return attentions, attentions_mean
 
 def plot_results(img0, attentions, attentions_mean):
     plt.figure(figsize=(6,6), dpi=200)
+    
     plt.subplot(3, 3, 1)
     plt.title("Original", size=6)
     plt.imshow(img0)
     plt.axis("off")
-    
+
     plt.subplot(3, 3, 2)
     plt.title("Attentions Mean", size=6)
     plt.imshow(attentions_mean)
@@ -74,7 +63,7 @@ def plot_results(img0, attentions, attentions_mean):
     
     plt.show()
 
-def main(image_path):
+def display_attention(image_path):
     model = load_model()
     img   = load_and_transform_image(image_path)
     img, dim_feature_map = prepare_image(img, PATCH_SIZE)
@@ -83,7 +72,4 @@ def main(image_path):
     attentions, attentions_mean = process_attention_maps(attentions, nh, PATCH_SIZE, dim_feature_map)
     
     plot_results(Image.open(image_path).convert('RGB'), attentions, attentions_mean)
-
-if __name__ == "__main__":
-    main("your_image.jpg")
 
