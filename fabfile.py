@@ -3,9 +3,8 @@ import os     # Use to interface with the terminal
 from fabric import task
 
 ## Scripts Imports
-from scripts.test import display_attention as dinov1_display_attention
-from scripts.test2 import display_attention as dinov2_display_attention
-##
+from scripts.dinov1_attention_map import display_attention as dinov1_display_attention
+from scripts.dinov2_attention_map import display_attention as dinov2_display_attention
 
 @task
 def map(c): 
