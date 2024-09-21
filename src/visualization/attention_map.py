@@ -1,71 +1,16 @@
-import torch
-import torchvision.transforms as pth_transforms
 
 from PIL import Image
 
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
+
 import torch.nn as nn
 import numpy as np
 
-from dinov2.models.vision_transformer import vit_small, vit_large
-
-# Constants
-PATCH_SIZE_V1 = 8
-PATCH_SIZE_V2 = 14
-IMAGE_SIZE    = 526  # Used for DINOv2
+from src.model_utils import load_model, load_and_transform_image, prepare_image, get_device 
 
 #----------------------------------------------------------------------------------------------------------------------------------
-# Load
-
-def load_model(version="dinov1", device=None):
-    """Load DINOv1 or DINOv2 model."""
-
-    print(f"Loading model {version}...")
-    
-    if version == "dinov1":
-        model = torch.hub.load('facebookresearch/dino:main', 'dino_vits16')
-        
-    elif version == "dinov2_small":
-        pretrained_model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14_reg') 
-        model = vit_small(patch_size=PATCH_SIZE_V2, img_size=IMAGE_SIZE, init_values=1.0, block_chunks=0, num_register_tokens=pretrained_model.num_register_tokens)
-        model.load_state_dict(pretrained_model.state_dict())
-        
-    elif version == "dinov2_large":
-        pretrained_model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitl14_reg')
-        model = vit_large(patch_size=PATCH_SIZE_V2, img_size=IMAGE_SIZE, init_values=1.0, block_chunks=0, num_register_tokens=pretrained_model.num_register_tokens)
-        model.load_state_dict(pretrained_model.state_dict()) 
-    else:
-        raise ValueError("Unsupported model version! Choose 'dinov1', 'dinov2_small', or 'dinov2_large'.")
-
-    model.to(device)
-   
-    for p in model.parameters():
-        p.requires_grad = False
-
-    model.eval()
-    return model
-
-def load_and_transform_image(image_path, version):
-    """Load and transform the image."""
-    img = Image.open(image_path).convert('RGB')
-    transform = pth_transforms.Compose([
-        pth_transforms.ToTensor(),
-        pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ])
-    img = transform(img)
-    return img
-
-#----------------------------------------------------------------------------------------------------------------------------------
-# Data processing
-
-def prepare_image(img, patch_size):
-    """Prepare the image for the model."""
-    w, h = img.shape[1] - img.shape[1] % patch_size, img.shape[2] - img.shape[2] % patch_size
-    img = img[:, :w, :h].unsqueeze(0)
-    w_featmap = img.shape[-2] // patch_size
-    h_featmap = img.shape[-1] // patch_size 
-    return img, (w_featmap, h_featmap)
+# Attention Map Functions
 
 def get_attention_maps(model, img, version, device=None):
     """Get attention maps from the model."""
@@ -88,9 +33,8 @@ def process_attention_maps(attentions, nh, patch_size, dim_feature_map, version)
     attentions_mean = np.mean(attentions, axis=0)
     return attentions, attentions_mean
 
-
 #----------------------------------------------------------------------------------------------------------------------------------
-# Plots
+# Plotting Functions
 
 def plot_attentions(img0, attentions, attentions_mean, overlay=False, dim_factor=1):
     """Plot the results with optional heatmap overlay."""
@@ -174,24 +118,16 @@ def plot_attentions_smooth(img0, attentions, attentions_mean, overlay=False, dim
     plt.show()
     
 #----------------------------------------------------------------------------------------------------------------------------------
-# Entry Point
+# Display Attention Maps from specified model on image
     
 def display_attention(image_path, version="dinov1", overlay=False):
-    """Main function to display attention maps with an optional overlay on the input image."""
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-    # Set the appropriate patch size for the model version
-    if version == "dinov1":
-        patch_size = PATCH_SIZE_V1
-    elif version in ["dinov2_small", "dinov2_large"]:
-        patch_size = PATCH_SIZE_V2
-    else:
-        raise ValueError("Unsupported model version! Choose 'dinov1', 'dinov2_small', or 'dinov2_large'.")
+    # Get device
+    device = get_device()
 
     # Load model and image
-    model = load_model(version=version, device=device)
-    img = load_and_transform_image(image_path, version)
-    img, dim_feature_map = prepare_image(img, patch_size)
+    model, patch_size    = load_model(version=version, device=device, inference=True)
+    img                  = load_and_transform_image(image_path=image_path)
+    img, dim_feature_map = prepare_image(image=img, patch_size=patch_size)
 
     # Get attention maps
     attentions, nh = get_attention_maps(model, img, version, device)
