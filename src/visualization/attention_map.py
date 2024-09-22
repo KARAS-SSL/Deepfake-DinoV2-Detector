@@ -126,7 +126,7 @@ def display_attention(image_path, version="dinov1", overlay=False):
 
     # Load model and image
     model, patch_size    = load_model(version=version, device=device, inference=True)
-    img                  = load_and_transform_image(image_path=image_path)
+    img                  = load_and_transform_image(image_path=image_path, add_batch_dim=False)
     img, dim_feature_map = prepare_image(image=img, patch_size=patch_size)
 
     # Get attention maps

@@ -49,15 +49,17 @@ def load_model(version="dinov1", device=None, inference=False):
         
     return model, patch_size
 
-def load_and_transform_image(image_path, image_size=None):
+def load_and_transform_image(image_path, image_size=None, add_batch_dim=False):
     """Load and transform the image."""
     img = Image.open(image_path).convert('RGB')
     transform = pth_transforms.Compose([
-        pth_transforms.Resize(image_size) if image_size else pth_transforms.Lambda(lambda x: x),
-        pth_transforms.ToTensor(),
+        pth_transforms.ToTensor(), 
+        pth_transforms.Resize((image_size, image_size), antialias=True) if image_size else pth_transforms.Lambda(lambda x: x),
         pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
-    img = transform(img)
+    
+    img = transform(img) 
+    if add_batch_dim: img = img.unsqueeze(0) 
     return img
 
 #----------------------------------------------------------------------------------------------------------------------------------
