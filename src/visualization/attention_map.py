@@ -9,7 +9,7 @@ import numpy as np
 
 from src.model_utils import load_model, load_and_transform_image, prepare_image, get_device 
 
-#----------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
 # Attention Map Functions
 
 def get_attention_maps(model, img, version, device=None):
@@ -33,7 +33,7 @@ def process_attention_maps(attentions, nh, patch_size, dim_feature_map, version)
     attentions_mean = np.mean(attentions, axis=0)
     return attentions, attentions_mean
 
-#----------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
 # Plotting Functions
 
 def plot_attentions(img0, attentions, attentions_mean, overlay=False, dim_factor=1):
@@ -117,7 +117,7 @@ def plot_attentions_smooth(img0, attentions, attentions_mean, overlay=False, dim
     plt.tight_layout()
     plt.show()
     
-#----------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
 # Display Attention Maps from specified model on image
     
 def display_attention(image_path, version="dinov1", overlay=False):
@@ -137,4 +137,5 @@ def display_attention(image_path, version="dinov1", overlay=False):
     attentions, attentions_mean = process_attention_maps(attentions, nh, patch_size, dim_feature_map, version)
 
     # Plot results with or without overlay
-    plot_attentions_smooth(Image.open(image_path).convert('RGB'), attentions, attentions_mean, overlay=overlay, dim_factor=dim_factor)
+    image = Image.open(image_path).convert('RGB')
+    plot_attentions_smooth(image, attentions, attentions_mean, overlay=overlay, dim_factor=dim_factor)

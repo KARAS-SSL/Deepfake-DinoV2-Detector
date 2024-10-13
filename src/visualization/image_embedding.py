@@ -9,7 +9,7 @@ import umap.umap_ as umap
 
 from src.model_utils import load_model, load_and_transform_image, get_device
 
-#----------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
 # Embedding Creation Functions
 
 IMGSZ_PATCH_RATIO = 16
@@ -55,7 +55,7 @@ def create_embeddings(input_dir, output_dir, version="dinov1", max_images_number
         embedding = create_image_embedding(model, patch_size, image_path, device)
         save_embedding(embedding, output_dir, image_filenames[i])
 
-#----------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
 # Embedding Display Functions
 
 def load_embeddings(input_dir_fake, input_dir_real):

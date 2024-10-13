@@ -2,9 +2,25 @@
 import os     # Use to interface with the terminal 
 from fabric import task
 
-## Scripts Imports
+#-------------------------------------------------------------------------------------------------------------------------------
+# Train Model
+
+# from src.trainning.trainer import train
+
+@task
+def TrainModel(c):
+    output_folder = "/path/to/output_folder"
+
+    # Hyperparameters
+    BATCH_SIZE    = 16
+    EPOCHS        = 10
+    LEARNING_RATE = 0.001
+    IMAGE_SIZE    = 526    
+    
+#-------------------------------------------------------------------------------------------------------------------------------
+# Show Attention Maps
+
 from src.visualization.attention_map import display_attention
-from src.visualization.image_embedding import create_embeddings, display_embeddings
 
 @task
 def DisplayAttention(c): 
@@ -12,6 +28,11 @@ def DisplayAttention(c):
     display_attention(img_path, version="dinov1", overlay=True)
     display_attention(img_path, version="dinov2_small", overlay=True)
     display_attention(img_path, version="dinov2_large", overlay=True)
+
+#-------------------------------------------------------------------------------------------------------------------------------
+# Embeddings
+
+from src.visualization.image_embedding import create_embeddings, display_embeddings
 
 @task
 def CreateEmbeddings(c): 
@@ -32,6 +53,7 @@ def DisplayEmbeddings(c):
     # display_embeddings(input_dir_fake, input_dir_real, algorithm="tsne")
     display_embeddings(input_dir_fake, input_dir_real, algorithm="umap") 
 
+#-------------------------------------------------------------------------------------------------------------------------------
 
 """
 TODO LIST 

@@ -10,6 +10,10 @@ PATCH_SIZE_V1 = 8
 PATCH_SIZE_V2 = 14
 IMAGE_SIZE    = 526  # Used for DINOv2
 
+def get_device():
+    """Check for CUDA availability and set device."""
+    return torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu") 
+
 #----------------------------------------------------------------------------------------------------------------------------------
 # Loading Model and Preprocessing Images
 
@@ -26,12 +30,18 @@ def load_model(version="dinov1", device=None, inference=False):
     elif version == "dinov2_small":
         patch_size       = PATCH_SIZE_V2 
         pretrained_model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14_reg') 
-        model = vit_small(patch_size=PATCH_SIZE_V2, img_size=IMAGE_SIZE, init_values=1.0, block_chunks=0, num_register_tokens=pretrained_model.num_register_tokens)
+        model = vit_small(
+            patch_size=PATCH_SIZE_V2, img_size=IMAGE_SIZE, 
+            init_values=1.0, block_chunks=0, num_register_tokens=pretrained_model.num_register_tokens
+        )
         model.load_state_dict(pretrained_model.state_dict())
     elif version == "dinov2_large":
         patch_size       = PATCH_SIZE_V2 
         pretrained_model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitl14_reg')
-        model = vit_large(patch_size=PATCH_SIZE_V2, img_size=IMAGE_SIZE, init_values=1.0, block_chunks=0, num_register_tokens=pretrained_model.num_register_tokens)
+        model = vit_large(
+            patch_size=PATCH_SIZE_V2, img_size=IMAGE_SIZE, 
+            init_values=1.0, block_chunks=0, num_register_tokens=pretrained_model.num_register_tokens
+        )
         model.load_state_dict(pretrained_model.state_dict()) 
     else:
         raise ValueError("Unsupported model version! Choose 'dinov1', 'dinov2_small', or 'dinov2_large'.")
@@ -62,9 +72,6 @@ def load_and_transform_image(image_path, image_size=None, add_batch_dim=False):
     if add_batch_dim: img = img.unsqueeze(0) 
     return img
 
-#----------------------------------------------------------------------------------------------------------------------------------
-# Helper Functions
-
 def prepare_image(image, patch_size):
     """Prepare the image for the model."""
     w, h = image.shape[1] - image.shape[1] % patch_size, image.shape[2] - image.shape[2] % patch_size
@@ -72,8 +79,3 @@ def prepare_image(image, patch_size):
     w_featmap = image.shape[-2] // patch_size
     h_featmap = image.shape[-1] // patch_size 
     return image, (w_featmap, h_featmap)
-
-def get_device():
-    """Check for CUDA availability and set device."""
-    return torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
- 
